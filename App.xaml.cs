@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using Feishu.Context.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -33,6 +34,10 @@ public partial class App : Application
 
         await _host.StartAsync();
 
+        // 初始化数据库
+        var dbService = ServiceProvider.GetRequiredService<DbService>();
+        await dbService.InitializeAsync();
+
         // 通过 DI 解析主窗口
         var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
         mainWindow.Show();
@@ -50,7 +55,7 @@ public partial class App : Application
         services.AddTransient<ViewModels.MainViewModel>();
 
         // 注册服务
-        // TODO: 在此注册更多服务
+        services.AddSingleton<DbService>();
     }
 
     protected override async void OnExit(ExitEventArgs e)

@@ -2,22 +2,24 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:Feishu.Context"
-        xmlns:views="clr-namespace:Feishu.Context.Views"
         Title="飞书上下文工具 - Feishu.Context"
         Width="1200"
         Height="800"
         WindowStartupLocation="CenterScreen">
     <Grid>
         <TabControl x:Name="MainTabControl"
-                    Margin="8">
+                    Margin="8"
+                    SelectedIndex="{Binding SelectedTabIndex}">
             <!-- 飞书采集 Tab -->
-            <TabItem Header="飞书采集">
-                <views:FeishuView />
+            <TabItem Header="飞书采集"
+                     x:Name="FeishuTab">
+                <ContentControl x:Name="FeishuContent" />
             </TabItem>
 
             <!-- API 调度 Tab -->
-            <TabItem Header="API 调度">
-                <views:ApiView />
+            <TabItem Header="API 调度"
+                     x:Name="ApiTab">
+                <ContentControl x:Name="ApiContent" />
             </TabItem>
         </TabControl>
     </Grid>

@@ -26,22 +26,34 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // 构建依赖注入容器
-        _host = Host.CreateDefaultBuilder()
-            .ConfigureServices(ConfigureServices)
-            .Build();
+        try
+        {
+            // 构建依赖注入容器（Host.CreateDefaultBuilder 自动加载 appsettings.json）
+            _host = Host.CreateDefaultBuilder()
+                .ConfigureServices(ConfigureServices)
+                .Build();
 
-        ServiceProvider = _host.Services;
+            ServiceProvider = _host.Services;
 
-        await _host.StartAsync();
+            await _host.StartAsync();
 
-        // 初始化数据库
-        var dbService = ServiceProvider.GetRequiredService<DbService>();
-        await dbService.InitializeAsync();
+            // 初始化数据库
+            var dbService = ServiceProvider.GetRequiredService<DbService>();
+            await dbService.InitializeAsync();
 
-        // 通过 DI 解析主窗口
-        var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
-        mainWindow.Show();
+            // 通过 DI 解析主窗口
+            var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
+            mainWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"应用程序启动失败：{ex.Message}\n\n{ex.StackTrace}",
+                "启动错误",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            Shutdown(1);
+        }
     }
 
     /// <summary>
@@ -49,8 +61,24 @@ public partial class App : Application
     /// </summary>
     private void ConfigureServices(HostBuilderContext context, IServiceCollection services)
     {
+        // 注册配置：从 IConfiguration 读取 appsettings.json
+        services.AddSingleton<AppSettings>(sp =>
+        {
+            var settings = new AppSettings();
+            var config = context.Configuration;
+            settings.Feishu.WebUrl = config["Feishu:WebUrl"] ?? settings.Feishu.WebUrl;
+            settings.Feishu.UserDataFolder = config["Feishu:UserDataFolder"] ?? settings.Feishu.UserDataFolder;
+            settings.Feishu.MessagePollingIntervalSeconds = int.TryParse(config["Feishu:MessagePollingIntervalSeconds"], out var mpi) ? mpi : 30;
+            settings.Api.DefaultTimeoutSeconds = int.TryParse(config["Api:DefaultTimeoutSeconds"], out var dto) ? dto : 30;
+            settings.Api.MaxRetryCount = int.TryParse(config["Api:MaxRetryCount"], out var mrc) ? mrc : 3;
+            settings.Database.ConnectionString = config["Database:ConnectionString"] ?? string.Empty;
+            return settings;
+        });
+
         // 注册视图
         services.AddTransient<MainWindow>();
+        services.AddTransient<Views.FeishuView>();
+        services.AddTransient<Views.ApiView>();
 
         // 注册 ViewModel
         services.AddTransient<ViewModels.MainViewModel>();
@@ -62,18 +90,33 @@ public partial class App : Application
         services.AddSingleton<FeishuWebService>();
         services.AddSingleton<ApiService>();
         services.AddSingleton<ScheduleService>();
-
-        // 注册视图
-        services.AddTransient<Views.ApiView>();
     }
 
     protected override async void OnExit(ExitEventArgs e)
     {
         base.OnExit(e);
 
+        try
+        {
+            // 停止所有运行中的调度
+            var scheduleService = ServiceProvider.GetService<ScheduleService>();
+            scheduleService?.StopAllSchedules();
+        }
+        catch
+        {
+            // 忽略退出时的清理异常
+        }
+
         if (_host != null)
         {
-            await _host.StopAsync();
+            try
+            {
+                await _host.StopAsync();
+            }
+            catch
+            {
+                // 忽略退出时的停止异常
+            }
             _host.Dispose();
         }
     }

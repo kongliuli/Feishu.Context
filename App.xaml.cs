@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using Feishu.Context.Data;
+using Feishu.Context.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -53,9 +54,17 @@ public partial class App : Application
 
         // 注册 ViewModel
         services.AddTransient<ViewModels.MainViewModel>();
+        services.AddTransient<ViewModels.FeishuViewModel>();
+        services.AddTransient<ViewModels.ApiViewModel>();
 
         // 注册服务
         services.AddSingleton<DbService>();
+        services.AddSingleton<FeishuWebService>();
+        services.AddSingleton<ApiService>();
+        services.AddSingleton<ScheduleService>();
+
+        // 注册视图
+        services.AddTransient<Views.ApiView>();
     }
 
     protected override async void OnExit(ExitEventArgs e)
